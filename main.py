@@ -18,6 +18,9 @@ import json
 import time
 
 # variáveis editáveis
+url_icon = "https://obsat.org.br/inscricoes/n2.png",  # url do ícone
+team_id = 41  # id da equipe
+session_id = 1111  # id de sessão
 wifi_ssid = 'OBSAT_WIFI'  # nome da rede wifi
 wifi_password = 'OBSatZenith1000'  # senha da rede wifi
 # endereço na qual serão enviadas as requisições com os dados
@@ -58,6 +61,17 @@ def getGPSData():
         }
 
     return {"error": None}
+
+
+def addMapPosition(name, latitude, longitude, session, info, icon):
+    response = urequests.get(f"https://bipes.net.br/map/addMarker.php", params={
+        'name': name,  # CubeSatPoincaré
+        'lat': latitude,
+        'long': longitude,
+        'session': session,
+        'info': info,
+        'icon': icon,
+    })
 
 
 def takePhoto(filename=None):
@@ -130,12 +144,12 @@ def now():
 
 
 def getData(payload={}):
-    '''
+    ''' 
     função que retorna os dados dos sensores juntamente com
     o payload passado no parâmetro da função.
     '''
     data = {
-        "equipe": 41,  # id da equipe
+        "equipe": team_id,  # id da equipe
         "bateria": batteryLevel(),
         "temperatura": currentTemperature(),
         "pressao": currentPressure(),
@@ -157,16 +171,27 @@ while (True):
 
     execution_current += 1  # adiciona 1 a quantidade de execuções
     current_photo = takePhoto(f"foto{execution_current}")  # foto tirada
+    ######### falta mandar a foto para visualização em baixo #########
     # objeto dos dados juntamente com o payload
     general_data = getData({
-        "timestamp": now().timestamp(),  # timestamp now
-        f"foto": f"foto{execution_current}",
+        "execucao_atual": execution_current,
+        # data formatada em DD/MM/AAAA H:M:S
+        "momento": now().strftime("%d/%m/%Y %H:%M:%S"),
         "gps": getGPSData(),
     })
-
-    # transforma os dados para o formato JSON
+    # transforma os dados para uma string em formato JSON
     json_data = json.dumps(general_data)
-    # envia a requisição HTTP pelo método POST
+
+    addMapPosition(
+        f"CubeSatPoincaré({execution_current})",  # título, sendo
+        general_data['gps']['latitude'],  # latitude
+        general_data['gps']['longitude'],  # longitude
+        session_id,  # id de sessão
+        json_data,  # informações dos sensores e do payload
+        url_icon  # url do ícone
+    )
+
+    # envia a requisição HTTP pelo método POST para a sonda Zenith
     response = urequests.post(url=payload_address, json=json_data)
 
 
