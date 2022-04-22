@@ -2,8 +2,6 @@ from flask import (
     Flask,
     request,
     render_template,
-    redirect,
-    url_for
 )
 import base64
 from os import walk
@@ -12,10 +10,10 @@ import json
 app = Flask(__name__)
 server_port = 33
 
-payload_filenames = next(walk("./payloads"), (None, None, []))[2]
+payload_filenames = next(walk("./static/payloads"), (None, None, []))[2]
 amount_payload = len(payload_filenames)
 
-photo_filenames = next(walk("./fotos"), (None, None, []))[2]
+photo_filenames = next(walk("./static/fotos"), (None, None, []))[2]
 amount_photos = len(photo_filenames)
 
 @app.route('/')
@@ -31,8 +29,7 @@ def showPayloads():
 
 @app.route('/payloads/<payload_name>')
 def currentPayload(payload_name):
-    payload_data = ""
-    with open(f"payloads/{payload_name}") as file:
+    with open(f"static/payloads/{payload_name}") as file:
         return json.loads(json.dumps(json.loads(str(file.read())), indent=4, sort_keys=False))
 
 
@@ -43,9 +40,9 @@ def showPhotos():
     filenames=photo_filenames
     )
 
-@app.route('/fotos/<photo_name>')
-def currentPhoto(photo_name):
-    return render_template("currentPhoto.html", img_name=photo_name)
+# @app.route('/fotos/<photo_name>')
+# def currentPhoto(photo_name):
+#     return render_template("currentPhoto.html", img_name=photo_name)
 
 # server part (receive image and save)
 @app.route('/sendData', methods=['POST'])

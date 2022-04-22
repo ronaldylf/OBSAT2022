@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fotos</title>
+    <link rel="stylesheet" href="./css/showPhotos.css">
+</head>
+<body>
+    <h3>número de execuções: {{amount_executions}}</h3>
+    <div class="filenames">
+    {% for name in filenames %}
+        <a href="../static/fotos/{{name}}">
+            <button class="btn btn-primary">{{name}}</button>
+        </a>
+        <br/>
+    {% endfor %}
+    </div>
+</body>
+</html>
