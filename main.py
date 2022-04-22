@@ -1,4 +1,5 @@
 # importação dos módulos para processamento e manipulação dos dados
+from ctypes import sizeof
 import network
 from machine import (
     Pin,
@@ -16,9 +17,13 @@ from mpu9250 import MPU9250
 from datetime import datetime, timedelta
 import json
 import time
+import base64
+import sys
 
 # variáveis editáveis
-url_icon = "https://obsat.org.br/inscricoes/n2.png",  # url do ícone
+url_ground_server = "http://localhost:80/sendData"
+# url_icon = "https://obsat.org.br/inscricoes/n2.png",  # url do ícone
+url_icon = "https://i.imgur.com/nHMQQ2Y.jpeg",  # url do ícone
 team_id = 41  # id da equipe
 session_id = 1111  # id de sessão
 wifi_ssid = 'OBSAT_WIFI'  # nome da rede wifi
@@ -82,7 +87,7 @@ def takePhoto(filename=None):
     '''
     photo = camera.capture()  # tira a foto
     if (type(filename) == str):
-        file = open(filename+".jpg", "bw")
+        file = open("fotos/"+filename+".jpg", "bw")
         file.write(photo)
         file.close()
     return photo
@@ -170,29 +175,48 @@ while (True):
         # loop contínuo enquanto espera a próxima execução
 
     execution_current += 1  # adiciona 1 a quantidade de execuções
-    current_photo = takePhoto(f"foto{execution_current}")  # foto tirada
-    ######### falta mandar a foto para visualização em baixo #########
-    # objeto dos dados juntamente com o payload
-    general_data = getData({
-        "execucao_atual": execution_current,
-        # data formatada em DD/MM/AAAA H:M:S
-        "momento": now().strftime("%d/%m/%Y %H:%M:%S"),
-        "gps": getGPSData(),
-    })
-    # transforma os dados para uma string em formato JSON
-    json_data = json.dumps(general_data)
 
+    # posiciona um ícone no mapa com base nos dados do sensor gps
     addMapPosition(
         f"CubeSatPoincaré({execution_current})",  # título, sendo
         general_data['gps']['latitude'],  # latitude
         general_data['gps']['longitude'],  # longitude
         session_id,  # id de sessão
-        json_data,  # informações dos sensores e do payload
+        f"execução número {execution_current}",  # número da execução
         url_icon  # url do ícone
     )
 
+    photo_name = f"foto{execution_current}"
+    bytes_photo = takePhoto(photo_name)  # foto tirada
+
+    # objeto dos dados juntamente com o payload
+    general_data = getData({
+        "execucao_atual": execution_current,
+        "momento": now().strftime("%d-%m-%Y %H:%M:%S"), # data formatada em dd/MM/AAAA H:M:S
+        "gps": getGPSData(),
+    })
+
+    # checar se o payload está com no máximo 90 bytes: sys.getsizeof(general_data['payload'])
+
+    # transforma os dados para uma string em formato JSON
+    json_data = json.dumps(general_data)
+    
+    # armazenamento dos dados atuais
+    data_name = f"payload{execution_current}"
+    data_file = open("payloads/"+data_name+".json", "w+")
+    data_file.write(json_data)
+    data_file.close()
+
     # envia a requisição HTTP pelo método POST para a sonda Zenith
     response = urequests.post(url=payload_address, json=json_data)
+
+    # cópia dos dados + adição da foto
+    data_copy = general_data.copy()
+    b64_photo = base64.b64encode(bytes_photo)
+    data_copy['payload']['foto'] = b64_photo.decode("utf-8")
+    json_datacopy = json.dumps(data_copy)
+    response = urequests.post(url=url_ground_server, json=json_data)
+
 
 
 end_moment = now()  # objeto do momento do fim da missão
