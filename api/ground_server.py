@@ -10,18 +10,16 @@ import json
 app = Flask(__name__)
 server_port = 33
 
-payload_filenames = next(walk("./static/payloads"), (None, None, []))[2]
-amount_payload = len(payload_filenames)
 
-photo_filenames = next(walk("./static/fotos"), (None, None, []))[2]
-amount_photos = len(photo_filenames)
-
-@app.route('/')
+@app.route('/', methods=['GET'])
 def home():
     return render_template("index.html")
 
 @app.route('/payloads')
 def showPayloads():
+    payload_filenames = sorted(next(walk("./static/payloads"), (None, None, []))[2])
+    amount_payload = len(payload_filenames)
+
     return render_template("showPayloads.html",
     amount_executions=amount_payload,
     filenames=payload_filenames
@@ -35,6 +33,8 @@ def currentPayload(payload_name):
 
 @app.route('/fotos')
 def showPhotos():
+    photo_filenames = sorted(next(walk("./static/fotos"), (None, None, []))[2])
+    amount_photos = len(photo_filenames)
     return render_template("showPhotos.html",
     amount_executions=amount_photos,
     filenames=photo_filenames
@@ -46,19 +46,20 @@ def showPhotos():
 
 # server part (receive image and save)
 @app.route('/sendData', methods=['POST'])
-def sendImage():
-    received_data = request.form.to_dict(flat=False)
-    bytes_img = base64.decodebytes(received_data['payload']['foto'].encode("utf-8"))
-    # saves received image
-    execucao_atual = received_data['payload']['execucao_atual']
-    image_name = f"fotos/foto{execucao_atual}.jpg"
-    image_file = open(image_name, "wb")
-    image_file.write(bytes_img)
-    image_file.close()
-    del received_data['foto']
+def sendData():
+    received_data = json.loads(request.get_json())
+    if 'foto' in received_data['payload']:
+        # saves received image
+        bytes_img = base64.decodebytes(received_data['payload']['foto'].encode("utf-8"))
+        execucao_atual = received_data['payload']['execucao_atual']
+        image_name = f"static/fotos/foto{execucao_atual}.jpg"
+        image_file = open(image_name, "wb")
+        image_file.write(bytes_img)
+        image_file.close()
+        del received_data['payload']['foto']
 
     data_name = f"payload{execucao_atual}.json"
-    data_file = open("payloads/"+data_name+".json", "w+")
+    data_file = open("static/payloads/"+data_name, "w+")
     data_file.write(json.dumps(received_data, indent=4, sort_keys=False))
     data_file.close()
     
