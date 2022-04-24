@@ -17,7 +17,7 @@ def home():
 
 @app.route('/payloads')
 def showPayloads():
-    payload_filenames = sorted(next(walk("./static/payloads"), (None, None, []))[2])
+    payload_filenames = next(walk("./static/payloads"), (None, None, []))[2]
     amount_payload = len(payload_filenames)
 
     return render_template("showPayloads.html",
@@ -33,7 +33,7 @@ def currentPayload(payload_name):
 
 @app.route('/fotos')
 def showPhotos():
-    photo_filenames = sorted(next(walk("./static/fotos"), (None, None, []))[2])
+    photo_filenames = next(walk("./static/fotos"), (None, None, []))[2]
     amount_photos = len(photo_filenames)
     return render_template("showPhotos.html",
     amount_executions=amount_photos,
