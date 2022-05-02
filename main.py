@@ -1,99 +1,83 @@
-exec(open('./main_functions.py').read(),globals())
-#from main_functions import *
-
-execution_current = 0  # nmero da execuo atual
-start_moment = now()  # objeto do momento de incio da misso
-
-# teste para checagem dos dados
-#play = rtttl.play(Pin((25), Pin.OUT), songs.find('Super Mario - Main Theme'))
-#print("end song")
-
-while(True):
-    # data = {
-    #     "equipe": team_id,  # id da equipe
-    #     "bateria": batteryLevel(), # ok
-    #     "temperatura": Temperature(), # ok
-    #     "pressao": Pressure(), # ok
-    #     "giroscopio": Gyro(), # ok
-    #     "acelerometro": Acceleration(), # ok
-    #     "payload": {
-    #         "execucao_atual": execution_current,
-    #         #"momento": time.strftime("%d/%m/%Y %H:%M:%S", moment_current), # data formatada em dd/MM/AAAA H:M:S
-    #         "momento": time.localtime(gps_data['timestamp']),
-    #         "gps": gps_data,
-    #         "co2": CO2(),
-    #         "umidade": Humidity(),
-    #         "luminosidade": Luminosity(),
-    #         "magnetometro": Magnetic()
-    #    }
-    # }
-    print(f"magnetometro: {Magnetic()}")
+try:
+    # variaveis, funcoes e setup dos componentes
+    exec(open('./main_functions.py').read(),globals())
+    # toca uma nota musical para indicar sucesso no arranque inicial
+    from machine import PWM, Pin
+    import time, os
+    pwm25 = PWM(Pin(25), freq=(1),  duty=512)
+    time.sleep(0.1)
+    pwm25.deinit()
+    os.chdir('/')
+except Exception as e:
+    # toca uma nota musical para indicar erro em alguma parte do programa de configuracao e encerra
+    print("ERROR: " + str(e))
+    import sys
+    import time
+    from machine import Pin, PWM
+    pwm25 = PWM(Pin(25), freq=(7040),  duty=512)
     time.sleep(1)
+    pwm25.deinit()
+    raise e
+
+cycle_current = 0  # variavel para contagem do numero de execucoes a cada 4 minutos
 
 while (True):
-    t0 = now(return_seconds=True)
+    t0 = time.time()
     delta_seconds = 0
+    # loop continuo enquanto espera a proxima execucao
+    print("aguardando proximo ciclo...")
     while (delta_seconds < (max_delta*60)):
-        t = now(return_seconds=True)
+        time.sleep(60)
+        t = time.time()
         delta_seconds = t - t0
-        # loop contnuo enquanto espera a prxima execuo
         percentage_complete = round((delta_seconds/(max_delta*60))*100, 2)
-        print(f"{delta_seconds}/{(max_delta*60)} ({max_delta} minutos) -> {percentage_complete}%")
-        time.sleep(1)
+        print(f"({round(delta_seconds/60, 2)} minutos) {delta_seconds}/{(max_delta*60)} ({max_delta} minutos) -> {percentage_complete}%")
+        
 
     print("\n")
     print("iniciando rotina")
-    execution_current += 1  # adiciona 1 a quantidade de execues
-    moment_current = now()
-    gps_data = getGPSData()
-
-    photo_name = f"foto{execution_current}"
-    bytes_photo = takePhoto(photo_name)  # foto tirada
+    cycle_current += 1  # adiciona 1 a quantidade de execues
+    gps_data = GPS()
 
     # objeto dos dados juntamente com o payload
+    print("coletando dados dos sensores...")
     general_data = getData({
-        "execucao_atual": execution_current,
-        #"momento": time.strftime("%d/%m/%Y %H:%M:%S", moment_current), # data formatada em dd/MM/AAAA H:M:S
-        "momento": time.localtime(gps_data['timestamp']),
-        "gps": gps_data,
-        "co2": CO2(),
         "umidade": Humidity(),
-        "luminosidade": Luminosity(),
-        "magnetometro": Magnetic()
+        "co2": CO2(),
+        "datetime": "%d/%d/%d %d:%d:%d"%gps_data['datetime']
     })
+    print("dados coletados:")
 
-
-    # checar se o payload est com no mximo 90 bytes: sys.getsizeof(general_data['payload'])
+    # printa os dados de cima pra baixo
+    for key in general_data: print((key, general_data[key]))
 
     # transforma os dados para uma string em formato JSON
     json_data = json.dumps(general_data)
 
     # armazenamento dos dados atuais
-    data_name = f"payload{execution_current}"
-    data_file = open("payloads/"+data_name+".json", "w+")
-    data_file.write(json_data)
+    print("armazenando os dados no cartão SD...")
+    data_file = open(f"/sd/payload{cycle_current}.json", "w+")
+    data_file.write(json.dumps(general_data))
     data_file.close()
+    print("dados armazenados")
 
     # posiciona um cone no mapa com base nos dados do sensor gps
     addMapPosition(
-        f"CubeSatPoincar({execution_current})",  # ttulo, sendo
-        general_data['gps']['latitude'],  # latitude
-        general_data['gps']['longitude'],  # longitude
+        f"CubeSatPoincare({cycle_current})",
+        gps_data['latitude'],  # latitude
+        gps_data['longitude'],  # longitude
         session_id,  # id de sesso
-        f"execucao nmero {execution_current}",  # nmero da execuo
+        str(gps_data),  # numero da execucao
         url_icon  # url do cone
     )
-    
+    print("localização definida no mapa")
 
-    # envia a requisio HTTP pelo mtodo POST para a sonda Zenith
-    response = urequests.post(url=payload_address, json=json_data)
+    # envia a requisio HTTP pelo metodo POST para a sonda Zenith e para outros endereços
+    print("enviando para servidores remotos...")
+    for address_current in payload_addresses:
+        response = urequests.post(url=address_current, json=json_data)
+        print(f"enviado para {address_current}")
 
-    # cpia dos dados + adio da foto
-    # b64_photo = base64.b64encode(bytes_photo)
-    # general_data['payload']['foto'] = b64_photo.decode("utf-8")
-    # json_data = json.dumps(general_data)
-    # response = urequests.post(url=url_ground_server, json=json_data)
+    print(f"terminado ciclo {cycle_current}")
 
-
-end_moment = now()  # objeto do momento do fim da misso
 print("end of mission")
