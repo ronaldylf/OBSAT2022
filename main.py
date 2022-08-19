@@ -28,11 +28,11 @@ while (True):
     # loop continuo enquanto espera a proxima execucao
     print("aguardando proximo ciclo...")
     while (delta_seconds < (max_delta*60)):
-        time.sleep(60)
         t = time.time()
         delta_seconds = t - t0
         percentage_complete = round((delta_seconds/(max_delta*60))*100, 2)
         print(f"({round(delta_seconds/60, 2)} minutos) {delta_seconds}/{(max_delta*60)} ({max_delta} minutos) -> {percentage_complete}%")
+        time.sleep(60)
 
     print("\n")
     print("iniciando rotina")
@@ -74,9 +74,9 @@ while (True):
 
     # envia a requisicao HTTP pelo metodo POST para a sonda Zenith e para outros endereços
     print(f"enviando para {len(payload_addresses)} servidores remotos...")
-    for address_current in payload_addresses:
-        response = urequests.post(url=address_current, json=json_data)
-        print(f"enviado para {address_current}")
+    for address in payload_addresses:
+        response = urequests.post(url=address, json=json_data)
+        print(f"enviado para {address}")
 
     print(f"terminado ciclo {cycle_current}")
 
