@@ -237,6 +237,17 @@ def getData(payload={}):
     }
     return data
 
+def digitalWrite(pin, value):
+  if value >= 1:
+    Pin(pin, Pin.OUT).on()
+  else:
+    Pin(pin, Pin.OUT).off()
+
+def takePhoto(pin=14):
+    digitalWrite(pin, 1)
+    digitalWrite(pin, 0) # manda o sinal para reiniciar a placa e tirar a foto
+    time.sleep(500/1000) # espera 500 milissegundos
+    digitalWrite(pin, 1)
 
 def debug():
     # apenas para na linha da funcao para fins de testes
