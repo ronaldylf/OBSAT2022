@@ -10,13 +10,21 @@ import numpy as np
 import cv2
 import os
 
+current_path = os.path.join(os.path.dirname(__file__))
+paths = [
+    os.path.join(current_path, "static"),
+    os.path.join(current_path, "static", "fotos"),
+    os.path.join(current_path, "static", "payloads")
+]
+for path in paths:
+    if not os.path.isdir(path):
+        print(f"not exist, creating {path}")
+        os.mkdir(path)
+
 
 def save_img(img):
     path = os.path.join("static", "fotos")
     print(f"path: {path}")
-    if not os.path.isdir(path):
-        print(f"not exist, creating {path}")
-        os.mkdir(path)
     count = len(os.listdir(path))+1
 
     path_and_file = os.path.join(path, "img_"+str(count)+".jpg")
@@ -63,7 +71,7 @@ def showPhotos():
 
 @app.route('/sendData', methods=['POST'])
 def sendData():
-    
+
     received_data = json.loads(request.get_json())
     current_id = received_data['payload']['execucao_atual']
 
