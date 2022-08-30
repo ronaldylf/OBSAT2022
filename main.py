@@ -5,9 +5,7 @@ try:
     from machine import PWM, Pin
     import time
     import os
-    pwm25 = PWM(Pin(25), freq=(1),  duty=512)
-    time.sleep(0.1)
-    pwm25.deinit()
+    soundOK(500/1000)
     os.chdir('/')
 except Exception as e:
     # toca uma nota musical por mais tempopara indicar erro em alguma parte do programa de configuracao e encerra
@@ -38,6 +36,10 @@ while (True):
     print("iniciando rotina")
     cycle_current += 1  # adiciona 1 a quantidade de execucoes
     gps_data = GPS()
+
+    print("tirando foto...")
+    takePhoto()
+    soundOK(500/1000)
 
     print("coletando dados dos sensores...")
     # objeto dos dados juntamente com o payload

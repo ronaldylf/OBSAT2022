@@ -1,7 +1,8 @@
-# importao dos mdulos para processamento e manipulacao dos dados
+# importao dos modulos para processamento e manipulacao dos dados
 import sdcard
 from machine import (
     Pin,
+    PWM,
     SoftI2C,
     UART,
     ADC,
@@ -29,7 +30,7 @@ wifi_password = 'OBSatZenith1000'  # senha da rede wifi
 # endereco na qual serao enviadas as requisicoes com os dados
 payload_addresses = [
     "http://192.168.0.1/",  # sonda
-    "http://ptsv2.com/t/5gwcr-1651146427/post",  # endereço terrestre
+    "http://161.35.3.156:33/sendData",  # endereço terrestre
 ]
 # url do icone que aparecera no mapa
 url_icon = "https://i.imgur.com/nHMQQ2Y.jpeg"
@@ -39,7 +40,7 @@ max_delta = 4
 # configuracao gps
 uartGPS = UART(2, tx=17, rx=13)
 uartGPS.init(9600, bits=8, parity=None, stop=1)
-gps = MicropyGPS(-3, "dd")  # utc-3 (fuso horário maranhense)
+gps = MicropyGPS(-3, "dd")  # utc-3 (fuso horário brasileiro)
 gpsdata = {}
 time.sleep(1)
 
@@ -248,6 +249,14 @@ def takePhoto(pin=14):
     digitalWrite(pin, 0) # manda o sinal para reiniciar a placa e tirar a foto
     time.sleep(500/1000) # espera 500 milissegundos
     digitalWrite(pin, 1)
+
+def playSound(freq=1, duty=512, time_on=5):
+    pwm25 = PWM(Pin(25), freq=(freq),  duty=duty)
+    time.sleep(time_on)
+    pwm25.deinit()
+
+def soundOK(time_on=0.1):
+    playSound(1, 512, time_on)
 
 def debug():
     # apenas para na linha da funcao para fins de testes
