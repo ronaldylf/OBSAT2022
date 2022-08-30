@@ -9,6 +9,7 @@ import json
 import numpy as np
 import cv2
 import os
+from datetime import datetime, timedelta
 
 current_path = os.path.join(os.path.dirname(__file__))
 paths = [
@@ -21,6 +22,10 @@ for path in paths:
         print(f"not exist, creating {path}")
         os.mkdir(path)
 
+def now():
+    utc_now = datetime.utcnow()
+    br_now = utc_now-timedelta(hours=3)
+    return br_now
 
 def save_img(img):
     path = os.path.join("static", "fotos")
@@ -71,7 +76,7 @@ def showPhotos():
 
 @app.route('/sendData', methods=['POST'])
 def sendData():
-
+    print("DATA received: " + now().strftime("%d/%M/%Y %H:%M:%S"))
     received_data = json.loads(request.get_json())
     current_id = received_data['payload']['execucao_atual']
 
@@ -85,11 +90,11 @@ def sendData():
 
 @app.route('/receivePhoto', methods=['POST'])
 def receivingPhoto():
-    print("photo received!")
+    print("PHOTO received: " + now().strftime("%d/%M/%Y %H:%M:%S"))
     received = request
     img = None
     if received.files:
-        print(received.files['imageFile'])
+        #print(received.files['imageFile'])
         # convert string of image data to uint8
         file = received.files['imageFile']
         nparr = np.fromstring(file.read(), np.uint8)
@@ -100,9 +105,11 @@ def receivingPhoto():
         save_img(img)
 
         return "[SUCCESS] Image Received", 201
-    return "################ something went wrong ########################", 201
+
+    print("something went wrong :(")
+    return "something went wrong, but thats ok", 201
 
 
 if __name__ == "__main__":
-    server_port = 80
+    server_port = 33
     app.run(host='0.0.0.0', port=server_port, debug=False)
