@@ -27,7 +27,7 @@ for path in paths:
 
 def now():
     utc_now = datetime.utcnow()
-    br_now = utc_now-timedelta(hours=3)
+    br_now = utc_now-timedelta(hours=3) # fuso brasileiro (UTC-3)
     return br_now
 
 def save_img(img):
@@ -35,7 +35,7 @@ def save_img(img):
     count = len(os.listdir(photos_path))+1
 
     filename = save_datetime.strftime(f"img_{count}__%d-%m-%Y__%H_%M_%S")+".jpg"
-    path_and_file = os.path.join("static", "fotos", filename)
+    path_and_file = os.path.join("static", "fotos", filename) # NAO MUDAR ESSE DIRETORIO NUNCA, SO FUNCIONA DESSE JEITO
     print(f"path_and_file: {path_and_file}")
     cv2.imwrite(path_and_file, img)
     print("Image Saved: " + filename)
@@ -134,6 +134,9 @@ def deletePhoto(filename):
         return "file may not exist", 500
     return 'photo delete successful'
 
+@app.route('/getNow', methods=['GET'])
+def getNow():
+    return str(now().timestamp())# returns a timestamp
 
 if __name__ == "__main__":
     server_port = 33
