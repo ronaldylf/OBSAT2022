@@ -17,30 +17,31 @@ from mpu9250 import MPU9250
 import CCS811
 import os
 import json
-import utime
 import time
 import sys
 import _thread
+import math
 
 # variveis editveis
 team_id = 41  # id da equipe
 session_id = 1111  # id de sessao para visualizacao do satelite no mapa
-wifi_ssid = 'OBSAT_WIFI'  # nome da rede wifi
-wifi_password = 'OBSatZenith1000'  # senha da rede wifi
+wifi_ssid = 'hotelpmrn'  # nome da rede wifi (padrao: OBSAT_WIFI)
+wifi_password = 'hotelpmrn'  # senha da rede wifi (padrao: OBSatZenith1000)
 # endereco na qual serao enviadas as requisicoes com os dados
 payload_addresses = [
     "http://192.168.0.1/",  # sonda
-    "http://161.35.3.156:33/sendData",  # endereço terrestre
+    "http://192.168.1.94:33/sendData", # endereço terrestre (padrao: http://161.35.3.156:33/sendData)
+    "https://obsat.org.br/teste_post/envio_bipes.php",  # endereço de testes
 ]
 # url do icone que aparecera no mapa
 url_icon = "https://i.imgur.com/nHMQQ2Y.jpeg"
-# quantos minutos para cada execucao (a cada 4 minutos uma execucao)
-max_delta = 4
+# quantos minutos para cada execucao (padrao: a cada 4 minutos uma execucao)
+max_delta = 0.5
 
 # configuracao gps
 uartGPS = UART(2, tx=17, rx=13)
 uartGPS.init(9600, bits=8, parity=None, stop=1)
-gps = MicropyGPS(-3, "dd")  # utc-3 (fuso horário brasileiro)
+gps = MicropyGPS(-3, "dd")  # utc-3 (fuso horario brasileiro)
 gpsdata = {}
 time.sleep(1)
 
@@ -68,9 +69,10 @@ print("preparando cartao sd")
 sd = sdcard.SDCard(SPI(2), Pin(15))
 try:
     os.mount(sd, '/sd')
-except:
-    pass
-print("SDCard OK")
+    print("SDCard OK")
+except Exception as e:
+    print(f"nao foi possível montar o SDCard: {str(e)}")
+
 
 # conexao com a rede wifi
 print("preparando wifi")
@@ -86,14 +88,13 @@ print("wifi OK")
 
 
 def clearSDCard():
-    # limpar dados do cartão SD caso necessario
+    # limpar dados do cartao SD caso necessario
     files = os.listdir("/sd")
     for file in files:
         try:
             os.remove(f"/sd/{file}")
         except:
-            # arquivos obrigatórios
-            pass
+            pass # arquivos obrigatorios
 
 
 def GPS():
@@ -148,7 +149,7 @@ def batteryLevel():
     return round((battery_level/2600)*100, 2)
 
 
-def Temperature():
+def getTemperature():
     # retorna a temperatura em graus celsius
     i2c = SoftI2C(scl=Pin(22), sda=Pin(21))
     i2c.writeto(0x40, b'\xf3')
@@ -158,7 +159,7 @@ def Temperature():
     return round(temperature_, 2)
 
 
-def Pressure():
+def getPressure():
     # retorna a pressao em Pascal
     bus = SoftI2C(scl=Pin(22), sda=Pin(21))
     bmp280 = BMP280(bus)
@@ -166,28 +167,40 @@ def Pressure():
     bmp280.oversample(BMP280_OS_HIGH)
     bmp280.normal_measure()
     pressure = bmp280.pressure
-    return pressure
+    return round(pressure, 2)
 
 
-def Gyro():
-    # retorna a taxa de giro nos eixos X, Y e Z
+def getGyro():
+    # retorna a taxa de giro nos eixos X, Y e Z em graus por segundo
     i2c = SoftI2C(scl=Pin(22), sda=Pin(21))
     mpu9250s = MPU9250(i2c)
-    gyro_xyz = tuple(mpu9250s.gyro)
+    gyro_xyz = []
+    for axis in mpu9250s.gyro: gyro_xyz.append(round(axis, 2))
+    
+    return tuple(gyro_xyz)
 
-    return gyro_xyz
 
+def getCurrentAngles():
+    # retorna a angulacao do satelite no eixos X, Y e Z em graus
+    accelerations = list(getAcceleration())
+    angles = []
+    for axis in accelerations:
+        if (axis / 9.8) > 1: axis = 1
+        if (axis / 9.8) < -1: axis = -1
+        angle_current = math.asin(axis / 9.8) / math.pi * 180
+        angles.append(round(angle_current, 2))
+    return tuple(angles)
 
-def Acceleration():
-    # retorna a  taxa de aceleracao nos eixos X, Y e Z
+def getAcceleration():
+    # retorna a  taxa de aceleracao nos eixos X, Y e Z em m/s2
     i2c = SoftI2C(scl=Pin(22), sda=Pin(21))
     mpu9250s = MPU9250(i2c)
-    acceleration_xyz = tuple(mpu9250s.acceleration)
+    acceleration_xyz = []
+    for axis in mpu9250s.acceleration: acceleration_xyz.append(round(axis, 2))
+    return tuple(acceleration_xyz)
 
-    return acceleration_xyz
 
-
-def CO2():
+def getCarbon():
     # retorna o nível de CO2 em partes por milhao (ppm)
     bus = SoftI2C(scl=Pin(22), sda=Pin(21))
     sCCS811 = CCS811.CCS811(i2c=bus, addr=0x5A)
@@ -195,13 +208,14 @@ def CO2():
     return sCCS811.eCO2
 
 
-def Humidity():
+def getHumidity():
     # retorna a umidade em porcentagem
     i2c = SoftI2C(scl=Pin(22), sda=Pin(21))
     i2c.writeto(0x40, b'\xf5')
     time.sleep_ms(70)
     t = i2c.readfrom(0x40, 2)
-    return -6+125*(t[0]*256+t[1])/65535
+    calculo = (-6+125*(t[0]*256+t[1])/65535)
+    return round(calculo, 2)
 
 
 def Luminosity():
@@ -222,41 +236,44 @@ def Magnetic():
     return magnetism_xyz
 
 
-def getData(payload={}):
+def requiredData():
     ''' 
-    retorna os dados dos sensores juntamente com
-    o payload passado no parametro da funcao
+    retorna os dados obrigatorios dos sensores
     '''
     data = {
         "equipe": team_id,  # id da equipe
         "bateria": batteryLevel(),
-        "temperatura": Temperature(),
-        "pressao": Pressure(),
-        "giroscopio": Gyro(),
-        "acelerometro": Acceleration(),
-        "payload": payload
+        "temperatura": getTemperature(),
+        "pressao": getPressure(),
+        "giroscopio": getGyro(),
+        "acelerometro": getAcceleration(),
     }
     return data
 
+
 def digitalWrite(pin, value):
-  if value >= 1:
-    Pin(pin, Pin.OUT).on()
-  else:
-    Pin(pin, Pin.OUT).off()
+    if value >= 1:
+        Pin(pin, Pin.OUT).on()
+    else:
+        Pin(pin, Pin.OUT).off()
+
 
 def takePhoto(pin=14):
     digitalWrite(pin, 1)
-    digitalWrite(pin, 0) # manda o sinal para reiniciar a placa e tirar a foto
-    time.sleep(500/1000) # espera 500 milissegundos
+    digitalWrite(pin, 0)  # manda o sinal para reiniciar a placa e tirar a foto
+    time.sleep(500/1000)  # espera 500 milissegundos
     digitalWrite(pin, 1)
+
 
 def playSound(freq=1, duty=512, time_on=5):
     pwm25 = PWM(Pin(25), freq=(freq),  duty=duty)
     time.sleep(time_on)
     pwm25.deinit()
 
+
 def soundOK(time_on=0.1):
     playSound(1, 512, time_on)
+
 
 def debug():
     # apenas para na linha da funcao para fins de testes
