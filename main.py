@@ -32,6 +32,13 @@ while (True):
 
     print("\n")
     print("iniciando rotina")
+    now_str = "erro"
+    try:
+        now_obj = getNowObject()
+        now_str = time.strftime("%d-%m-%Y__%H_%M_%S", now_obj)
+        print("data atual capturada com sucesso!")
+    except:
+        print("nao foi possivel capturar a data atual, prosseguindo...")
     cycle_current += 1  # adiciona 1 a quantidade de execucoes
     gps_data = GPS()
 
@@ -45,7 +52,7 @@ while (True):
         "umidade": getHumidity(),
         "co2": getCarbon(),
         "ciclo": cycle_current,
-        # "datetime": "%d/%d/%d %d:%d:%d" % gps_data['datetime']
+        "datatempo": now_str
     }
 
     print("dados coletados:")
@@ -61,8 +68,7 @@ while (True):
         data_file.close()
         print("dados armazenados")
     except Exception as e:
-        print(
-            f"algo deu errado com o armazenamento dos dados no cartao: {str(e)}")
+        print(f"algo deu errado com o armazenamento dos dados no cartao: {str(e)}")
 
     # posiciona um icone no mapa com base nos dados do sensor gps
     try:
