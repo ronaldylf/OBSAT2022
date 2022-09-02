@@ -1,0 +1,21 @@
+{
+    "giroscopio": [
+        0.01,
+        -0.03,
+        0.01
+    ],
+    "equipe": 41,
+    "payload": {
+        "umidade": 46.5,
+        "co2": 0,
+        "ciclo": 3
+    },
+    "pressao": 101197.4,
+    "bateria": 94.15,
+    "temperatura": 34.1,
+    "acelerometro": [
+        9.8,
+        0.08,
+        -0.08
+    ]
+}

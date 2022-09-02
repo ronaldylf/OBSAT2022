@@ -5,15 +5,19 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payloads</title>
-    <link rel="stylesheet" href="./css/showPayloads.css">
+    <link rel="stylesheet" href="../static/css/showPayloads.css">
+    <script src="../static/js/showPayloads.js"></script>
 </head>
 <body>
     <h3>número de execuções: {{amount_executions}}</h3>
     <div class="filenames">
     {% for name in filenames %}
-        <a href="/payloads/{{name}}">
+        <a href="../static/payloads/{{name}}">
             <button class="btn btn-primary">{{name}}</button>
         </a>
+
+        <button onclick="deletePayload('{{name}}')">Excluir</button>
+
         <br/>
     {% endfor %}
     </div>

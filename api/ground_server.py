@@ -12,10 +12,13 @@ import os
 from datetime import datetime, timedelta
 
 current_path = os.path.join(os.path.dirname(__file__))
+static_path = os.path.join(current_path, "static")
+photos_path = os.path.join(current_path, "static", "fotos")
+payloads_path = os.path.join(current_path, "static", "payloads")
 paths = [
-    os.path.join(current_path, "static"),
-    os.path.join(current_path, "static", "fotos"),
-    os.path.join(current_path, "static", "payloads")
+    static_path,
+    photos_path,
+    payloads_path
 ]
 for path in paths:
     if not os.path.isdir(path):
@@ -28,17 +31,17 @@ def now():
     return br_now
 
 def save_img(img):
-    path = os.path.join("static", "fotos")
-    print(f"path: {path}")
-    count = len(os.listdir(path))+1
+    save_datetime = now()
+    count = len(os.listdir(photos_path))+1
 
-    path_and_file = os.path.join(path, "img_"+str(count)+".jpg")
+    filename = save_datetime.strftime(f"img_{count}__%d-%m-%Y__%H_%M_%S")+".jpg"
+    path_and_file = os.path.join("static", "fotos", filename)
     print(f"path_and_file: {path_and_file}")
     cv2.imwrite(path_and_file, img)
-    print("Image Saved")
+    print("Image Saved: " + filename)
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path="/static", static_folder=static_path)
 
 
 @app.route('/', methods=['GET'])
@@ -48,14 +51,24 @@ def home():
 
 @app.route('/payloads')
 def showPayloads():
-    payload_filenames = next(walk("./static/payloads"), (None, None, []))[2]
-    amount_payload = len(payload_filenames)
+    payload_filenames = os.listdir(payloads_path)
+    payload_filenames = sorted(payload_filenames) # to order
+    amount_payloads = len(payload_filenames)
 
     return render_template("showPayloads.html",
-                           amount_executions=amount_payload,
+                           amount_executions=amount_payloads,
                            filenames=payload_filenames
                            )
 
+@app.route('/fotos')
+def showPhotos():
+    photo_filenames = os.listdir(photos_path)
+    photo_filenames = sorted(photo_filenames) # to order
+    amount_photos = len(photo_filenames)
+    return render_template("showPhotos.html",
+                           amount_executions=amount_photos,
+                           filenames=photo_filenames
+                           )
 
 @app.route('/payloads/<payload_name>')
 def currentPayload(payload_name):
@@ -63,41 +76,37 @@ def currentPayload(payload_name):
         return json.loads(json.dumps(json.loads(str(file.read())), indent=4, sort_keys=False))
 
 
-@app.route('/fotos')
-def showPhotos():
-    photo_filenames = next(walk("./static/fotos"), (None, None, []))[2]
-    print(photo_filenames)
-    amount_photos = len(photo_filenames)
-    return render_template("showPhotos.html",
-                           amount_executions=amount_photos,
-                           filenames=photo_filenames
-                           )
-
 
 @app.route('/sendData', methods=['POST'])
 def sendData():
-    print("DATA received: " + now().strftime("%d/%M/%Y %H:%M:%S"))
-    received_data = json.loads(request.get_json())
-    current_id = received_data['payload']['execucao_atual']
+    sent_datetime = now()
+    print("DATA received in: " + now().strftime("%d/%m/%Y %H:%M:%S"))
+    received_data = request.get_json()
+    try:
+        current_id = received_data['payload']['ciclo']
+    except:
+        current_id = 999
+        print(f"did not found current_id, turning it to: {current_id}")
 
-    data_name = f"payload{current_id}.json"
-    data_file = open("static/payloads/"+data_name, "w+")
+    data_name = sent_datetime.strftime(f"payload_{current_id}__%d-%m-%Y__%H_%M_%S")+".json"
+    data_file = open(os.path.join(payloads_path, data_name), "w+")
     data_file.write(json.dumps(received_data, indent=4, sort_keys=False))
     data_file.close()
 
-    return 'ok'
+    return 'sent successful'
 
 
 @app.route('/receivePhoto', methods=['POST'])
 def receivingPhoto():
-    print("PHOTO received: " + now().strftime("%d/%M/%Y %H:%M:%S"))
+    print("PHOTO received: " + now().strftime("%d/%m/%Y %H:%M:%S"))
     received = request
     img = None
     if received.files:
         #print(received.files['imageFile'])
         # convert string of image data to uint8
         file = received.files['imageFile']
-        nparr = np.fromstring(file.read(), np.uint8)
+        #nparr = np.fromstring(file.read(), np.uint8) #old and deprecated
+        nparr = np.frombuffer(file.read(), np.uint8)
         # decode image
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         #h, w, _ = img.shape = img.shape
@@ -107,9 +116,25 @@ def receivingPhoto():
         return "[SUCCESS] Image Received", 201
 
     print("something went wrong :(")
-    return "something went wrong, but thats ok", 201
+    return "something went wrong, but ok", 201
+
+@app.route('/deletePayload/<filename>', methods=['DELETE'])
+def deletePayload(filename):
+    try:
+        os.remove(os.path.join(payloads_path, filename))
+    except:
+        return "file may not exist", 500
+    return 'payload deleted successful'
+
+@app.route('/deletePhoto/<filename>', methods=['DELETE'])
+def deletePhoto(filename):
+    try:
+        os.remove(os.path.join(photos_path, filename))
+    except:
+        return "file may not exist", 500
+    return 'photo delete successful'
 
 
 if __name__ == "__main__":
     server_port = 33
-    app.run(host='0.0.0.0', port=server_port, debug=False)
+    app.run(host='0.0.0.0', port=server_port, debug=True)

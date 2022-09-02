@@ -5,7 +5,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fotos</title>
-    <link rel="stylesheet" href="./css/showPhotos.css">
+    <link rel="stylesheet" href="../static/css/showPhotos.css">
+    <script src="../static/js/showPhotos.js"></script>
 </head>
 <body>
     <h3>número de execuções: {{amount_executions}}</h3>
@@ -14,6 +15,9 @@
         <a href="../static/fotos/{{name}}">
             <button class="btn btn-primary">{{name}}</button>
         </a>
+
+        <button onclick="deletePhoto('{{name}}')">Excluir</button>
+
         <br/>
     {% endfor %}
     </div>
