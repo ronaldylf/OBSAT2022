@@ -23,21 +23,21 @@ import _thread
 import math
 
 # variveis editveis
-team_id = 41  # id da equipe
+team_id = "01"  # id da equipe
 session_id = 1111  # id de sessao para visualizacao do satelite no mapa
-wifi_ssid = 'hotelpmrn'  # nome da rede wifi (padrao: OBSAT_WIFI)
-wifi_password = 'hotelpmrn'  # senha da rede wifi (padrao: OBSatZenith1000)
+wifi_ssid = 'OBSAT_TESTES'  # nome da rede wifi (padrao: OBSAT_WIFI)
+wifi_password = 'obsatsenha'  # senha da rede wifi (padrao: OBSatZenith1000)
 # endereco na qual serao enviadas as requisicoes com os dados
 earth_server = "http://192.168.60.201:33" # endereco terrestre (padrao: http://161.35.3.156:33)
 payload_addresses = [
     "http://192.168.0.1/",  # sonda
-    f"{earth_server}/sendData", 
-    "https://obsat.org.br/teste_post/envio_bipes.php",  # endereço de testes
+    f"{earth_server}/sendData",
+    "https://obsat.org.br/teste_post/envio.php",  # endereço de testes
 ]
 # url do icone que aparecera no mapa
 url_icon = "https://i.imgur.com/nHMQQ2Y.jpeg"
 # quantos minutos para cada execucao (padrao: a cada 4 minutos uma execucao)
-max_delta = 0.5
+max_delta = 4
 
 # configuracao gps
 uartGPS = UART(2, tx=17, rx=13)
