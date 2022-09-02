@@ -28,9 +28,10 @@ session_id = 1111  # id de sessao para visualizacao do satelite no mapa
 wifi_ssid = 'hotelpmrn'  # nome da rede wifi (padrao: OBSAT_WIFI)
 wifi_password = 'hotelpmrn'  # senha da rede wifi (padrao: OBSatZenith1000)
 # endereco na qual serao enviadas as requisicoes com os dados
+earth_server = "http://192.168.60.201:33" # endereco terrestre (padrao: http://161.35.3.156:33)
 payload_addresses = [
     "http://192.168.0.1/",  # sonda
-    "http://192.168.1.94:33/sendData", # endereço terrestre (padrao: http://161.35.3.156:33/sendData)
+    f"{earth_server}/sendData", 
     "https://obsat.org.br/teste_post/envio_bipes.php",  # endereço de testes
 ]
 # url do icone que aparecera no mapa
@@ -65,10 +66,23 @@ print("gps OK")
 
 
 # configuracao microSD
+def clearSDCard():
+    # limpar dados do cartao SD caso necessario
+    files = os.listdir("/sd")
+    for file in files:
+        try:
+            os.remove(f"/sd/{file}")
+        except:
+            pass # arquivos obrigatorios
+
 print("preparando cartao sd")
 sd = sdcard.SDCard(SPI(2), Pin(15))
 try:
-    os.mount(sd, '/sd')
+    if 'sd' in os.listdir('/'): # se estiver montado, nao faz nada
+        print("sdcard ja montado, que beleza!")
+    else: # caso tenha sido removido e adicionado, monta
+        print("montando cartao...")
+        os.mount(sd, '/sd')
     print("SDCard OK")
 except Exception as e:
     print(f"nao foi possível montar o SDCard: {str(e)}")
@@ -86,15 +100,6 @@ if not sta_if.isconnected():
         pass
 print("wifi OK")
 
-
-def clearSDCard():
-    # limpar dados do cartao SD caso necessario
-    files = os.listdir("/sd")
-    for file in files:
-        try:
-            os.remove(f"/sd/{file}")
-        except:
-            pass # arquivos obrigatorios
 
 
 def GPS():
@@ -274,6 +279,11 @@ def playSound(freq=1, duty=512, time_on=5):
 def soundOK(time_on=0.1):
     playSound(1, 512, time_on)
 
+def getNowObject():
+    url = f"{earth_server}/getNow"
+    resp = urequests.get(url)
+    obj = time.localtime(float(resp.text))
+    return obj
 
 def debug():
     # apenas para na linha da funcao para fins de testes
